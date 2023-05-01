@@ -5,6 +5,7 @@ import util.util as util
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+from PIL import Image
 
 from torchvision import models
 
@@ -58,8 +59,8 @@ class pGAN(BaseModel):
         input_A = input['A' if AtoB else 'B']
         input_B = input['B' if AtoB else 'A']
         if len(self.gpu_ids) > 0:
-            input_A = input_A.cuda(self.gpu_ids[0], async=True)
-            input_B = input_B.cuda(self.gpu_ids[0], async=True)
+            input_A = input_A.cuda(self.gpu_ids[0])
+            input_B = input_B.cuda(self.gpu_ids[0])
         self.input_A = input_A
         self.input_B = input_B
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
@@ -83,9 +84,10 @@ class pGAN(BaseModel):
     def backward_D(self):
         # Fake
         # stop backprop to the generator by detaching fake_B
-        fake_AB = self.fake_AB_pool.query(torch.cat((self.real_A, self.fake_B), 1).data)
-        pred_fake = self.netD(fake_AB.detach())
-        self.loss_D_fake = self.criterionGAN(pred_fake, False)
+        # real_A: [batch,3,256,256] , fake_B: [batch,1,256,256]
+        fake_AB = self.fake_AB_pool.query(torch.cat((self.real_A, self.fake_B), 1).data) # condition을 이렇게 넣어줬구나. 가짜라고 판별해야하는 것에 정답도 은근슬쩍 넣어서 Discriminator가 
+        pred_fake = self.netD(fake_AB.detach()) # pred_fake: [batch,1,256,256] , fake_AB: [batch,4,256,256]
+        self.loss_D_fake = self.criterionGAN(pred_fake, False) # pred_fake shape로 0(False)를 채워줌. 그리고 loss를 구한다
 
         # Real
         real_AB = torch.cat((self.real_A, self.real_B), 1)
@@ -100,15 +102,15 @@ class pGAN(BaseModel):
         
     def backward_G(self):
         # First, G(A) should fake the discriminator
-        fake_AB = torch.cat((self.real_A, self.fake_B), 1)
+        fake_AB = torch.cat((self.real_A, self.fake_B), 1) # TODO: 왜 real_B와 fake_B를 넣어서 학습시키는게 아니라 real_A를 넣었을까?? 논리적으로 이해가 안돼 
         pred_fake = self.netD(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)*self.opt.lambda_adv
 
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_A
         #Perceptual loss
-        self.VGG_real=self.vgg(self.real_B.expand([int(self.real_B.size()[0]),3,int(self.real_B.size()[2]),int(self.real_B.size()[3])]))[0]
-        self.VGG_fake=self.vgg(self.fake_B.expand([int(self.real_B.size()[0]),3,int(self.real_B.size()[2]),int(self.real_B.size()[3])]))[0]
+        self.VGG_real=self.vgg(self.real_B.expand( [ int(self.real_B.size()[0]), 3, int(self.real_B.size()[2]), int(self.real_B.size()[3]) ] ))[0] # real_B: [16,1,256,256] , real_B.expand [16,3,256,256]
+        self.VGG_fake=self.vgg(self.fake_B.expand( [ int(self.real_B.size()[0]), 3, int(self.real_B.size()[2]), int(self.real_B.size()[3]) ] ))[0] # VGG: [16,128,128,128] , VGG[0]: [128,128,128]
         self.VGG_loss=self.criterionL1(self.VGG_fake,self.VGG_real)* self.opt.lambda_vgg
         
         self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.VGG_loss
@@ -127,15 +129,15 @@ class pGAN(BaseModel):
         self.optimizer_G.step()
 
     def get_current_errors(self):
-        return OrderedDict([('G_GAN', self.loss_G_GAN.data[0]),
-                            ('G_L1', self.loss_G_L1.data[0]),
-                            ('G_VGG', self.VGG_loss.data[0]),
-                            ('D_real', self.loss_D_real.data[0]),
-                            ('D_fake', self.loss_D_fake.data[0])
+        return OrderedDict([('G_GAN', self.loss_G_GAN.item()),
+                            ('G_L1', self.loss_G_L1.item()),
+                            ('G_VGG', self.VGG_loss.item()),
+                            ('D_real', self.loss_D_real.item()),
+                            ('D_fake', self.loss_D_fake.item())
                             ])
 
     def get_current_visuals(self):
-        real_A = util.tensor2im(self.real_A.data)
+        real_A = util.tensor2im(self.real_A.data[:,0,:,:].unsqueeze(1)) # 코드에 차원 안맞는 에러가 있어서 수정해줌
         fake_B = util.tensor2im(self.fake_B.data)
         real_B = util.tensor2im(self.real_B.data)
         return OrderedDict([('real_A', real_A), ('fake_B', fake_B), ('real_B', real_B)])

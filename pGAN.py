@@ -11,7 +11,7 @@ def train():
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
     print('Training images = %d' % dataset_size)    
-    visualizer = Visualizer(opt)
+    visualizer = Visualizer(opt) # TODO: 어떤걸 Visualize 하는 걸까
     total_steps = 0
     #Starts training
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
