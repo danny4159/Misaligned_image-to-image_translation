@@ -17,12 +17,12 @@ def CreateDataset(opt):
     f = h5py.File(target_file,'r')              # return data_x, data_y
     print("data_x shape: ", f['data_x'].shape)
     print("data_y shape: ", f['data_y'].shape)
-    slices=np.array(f['data_x']).shape[3]//2    # size(data_x,data_y) = 256,256,2275,3  (x,y,slice,slice한칸 옮긴 결과)
-    samples=range(np.array(f['data_y']).shape[2])
+    slices=np.array(f['data_x']).shape[3]//2    # size(data_x,data_y) = 256,256,2275,3  (x,y,slice,slice한칸 옮긴 결과)  3//2 = 1
+    samples=list(range(np.array(f['data_y']).shape[2]))
     #Selecting neighbouring slices based on the inputs
     if opt.which_direction=='AtoB':
-        data_x=np.array(f['data_x'])[:,:,:,slices-opt.input_nc//2:slices+opt.input_nc//2+1]
-        data_y=np.array(f['data_y'])[:,:,:,slices-opt.output_nc//2:slices+opt.output_nc//2+1]
+        data_x=np.array(f['data_x'])[:,:,:,slices-opt.input_nc//2:slices+opt.input_nc//2+1]  # input_nc가 1일 때, [:,:,:,1-0:1+1] = [:,:,:,1:2] = [:,:,:,1]
+        data_y=np.array(f['data_y'])[:,:,:,slices-opt.output_nc//2:slices+opt.output_nc//2+1] # output_nc가 3일 때, [:,:,:,1-1:1+1+1] = [:,:,:,0:3] = [:,:,:,3] neighbouring slices를 모두 포함
     else:            
         data_y=np.array(f['data_y'])[:,:,:,slices-opt.input_nc//2:slices+opt.input_nc//2+1]
         data_x=np.array(f['data_x'])[:,:,:,slices-opt.output_nc//2:slices+opt.output_nc//2+1]

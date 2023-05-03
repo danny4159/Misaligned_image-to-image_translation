@@ -1,10 +1,12 @@
-def train():
+def train(opt):
     import time
     from options.train_options import TrainOptions
     from data import CreateDataLoader
     from models import create_model
     from util.visualizer import Visualizer
-    opt = TrainOptions().parse()
+    import sys
+    sys.argv.extend(['--no_dropout'])
+
     model = create_model(opt)
     #Loading data
     data_loader = CreateDataLoader(opt)
@@ -56,18 +58,17 @@ def train():
         print('End of epoch %d / %d \t Time Taken: %d sec' %
               (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()
-def test():
+def test(opt):
     import sys
-    sys.argv=args  
     import os
     from options.test_options import TestOptions
     from data import CreateDataLoader
     from models import create_model
     from util.visualizer import Visualizer
     from util import html
-    
-    
-    opt = TestOptions().parse()
+    sys.argv.extend(['--no_dropout'])
+    sys.argv.extend(['--serial_batches'])
+
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
@@ -92,11 +93,3 @@ def test():
         print('%04d: process image... %s' % (i, img_path))
         visualizer.save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio)    
     webpage.save()    
-import sys
-sys.argv.extend(['--model','cGAN','--no_dropout'])
-args=sys.argv
-if '--training' in str(args):
-    train()
-else:
-    sys.argv.extend(['--serial_batches'])
-    test()    

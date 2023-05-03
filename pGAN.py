@@ -1,17 +1,17 @@
-def train():
+def train(opt):
     import time
     from options.train_options import TrainOptions
     from data import CreateDataLoader
     from models import create_model
     from util.visualizer import Visualizer
-    opt = TrainOptions().parse()
+    # opt = TrainOptions().parse()
     model = create_model(opt)
     #Loading data
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
     print('Training images = %d' % dataset_size)    
-    visualizer = Visualizer(opt) # TODO: 어떤걸 Visualize 하는 걸까
+    visualizer = Visualizer(opt) # Web Visualizer
     total_steps = 0
     #Starts training
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
@@ -56,9 +56,10 @@ def train():
         print('End of epoch %d / %d \t Time Taken: %d sec' %
               (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()
-def test():
+    #TODO: MI 계산
+
+def test(opt):
     import sys
-    sys.argv=args  
     import os
     from options.test_options import TestOptions
     from data import CreateDataLoader
@@ -66,8 +67,9 @@ def test():
     from util.visualizer import Visualizer
     from util import html
     
+    sys.argv.extend(['--serial_batches'])
     
-    opt = TestOptions().parse()
+    # opt = TestOptions().parse()
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
@@ -92,11 +94,3 @@ def test():
         print('%04d: process image... %s' % (i, img_path))
         visualizer.save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio)    
     webpage.save()    
-import sys
-sys.argv.extend(['--model','pGAN'])
-args=sys.argv
-if '--training' in str(args):
-    train()
-else:
-    sys.argv.extend(['--serial_batches'])
-    test()    
