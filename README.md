@@ -1,49 +1,62 @@
-# pGAN and cGAN
+# Introduction
 
-These techniques (pGAN and cGAN) are described in the [following](https://ieeexplore.ieee.org/abstract/document/8653423) paper:
+- Misaligned image to image translation 문제를 해결하기위해 해당 코드에서 실험을 진행.
 
-Dar SUH, Yurt M, Karacan L, Erdem A, Erdem E, Çukur T. Image Synthesis in Multi-Contrast MRI with Conditional Generative Adversarial Networks. IEEE Transaction on Medical Imaging. 2019.
+- 아래 논문에서 공유한 코드를 Baseline Model로 사용.
 
+- 아래 논문에서는 대표적으로 pGAN, cGAN 모델을 소개함. (pGAN: supervised learning, cGAN: unsupervised learning)
 
-# Demo
+- pGAN을 Base로 하는 'ourGAN'이라는 모델을 새롭게 구축하여 이곳에서 기능을 추가하며 비교 실험을 진행.
 
-The following commands train and test pGAN and cGAN models for T1 to T2 synthesis on images from the IXI dataset. Registered dataset of training and testing subjects can be downloaded from [here](https://drive.google.com/drive/u/1/folders/1En_S9c081T2hV-joaFJv3xlMX2Eqzl5V). Copy the "datasets" folder in your current directory.  <br />
-Pre-trained pGAN and cGAN models are also present in the checkpoints directory. 
-<br />
-To run the code on other datasets, create a file named 'data.mat' for training, testing and validation samples and place them in their corresponding directories (datasets/yourdata/train, test, val). 'data.mat' should contain a variable named data_x for the source contrast and data_y for the target contrast. If you are creating the 'data.mat' file via Matlab please make sure that dimensions (1, 2, 3, 4) correspond to (neighbouring slices, number of samples, x-size, y-size). If you are saving the file via python then transpose the dimensions. Also, make sure that voxel intensity of each subject is normalized between 0-1.
+- [[paper]](https://ieeexplore.ieee.org/abstract/document/8653423) Dar SUH, Yurt M, Karacan L, Erdem A, Erdem E, Çukur T. Image Synthesis in Multi-Contrast MRI with Conditional Generative Adversarial Networks. IEEE Transaction on Medical Imaging. 2019. <br /><br /><br />
 
-## pGAN
+# Dataset
 
-### Training
-python pGAN.py --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --lambda_A 100 --batchSize 1 --output_nc 1 --input_nc 3 --gpu_ids 0 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_vgg 100 --checkpoints_dir checkpoints/ --training
- <br />
- <br />
-name - name of the experiment  <br />
-which_direction - direction of synthesis. If it is set to 'AtoB' synthesis would be from data_x to data_y, and vice versa <br />
-lambda_A - weighting of the pixel-wise loss function  <br />
-input_nc, output_nc - number of neighbouring slices used. If you do not want to use the neighboring slices just set them to 1, the central slices would be selected.  <br />
-niter, n_iter_decay - number of epochs with normal learning rate and number of epochs for which the learning leate is decayed to 0. Total number of epochs is equal to sum of them  <br />
-save_epoch_freq -frequency of saving models <br />
-lambda_vgg - weighting of the pixel-wise loss function 
+- IXI dataset을 통해 MRI T1, T2 이미지 translation을 수행.
 
-### Testing
-python pGAN.py --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --phase test --output_nc 1 --input_nc 3 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/
+- [Dataset Download](https://drive.google.com/drive/u/1/folders/1En_S9c081T2hV-joaFJv3xlMX2Eqzl5V)
 
-## cGAN
+- 위 데이터는 IXI dataset에서 전처리가 이루어진 데이터셋
 
-### Training
-python cGAN.py --dataroot datasets/IXI --name cGAN_run --model cGAN --output_nc 1 --input_nc 1 --gpu_ids 0 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_A 100 --lambda_B 100 --checkpoints_dir checkpoints --dataset_mode unaligned_mat --training  <br /> 
- <br />
-lambda_A, lambda_B - weightings of the cycle loss functions for both directions
-dataset_mode - if set to unaligned the indices of the source and target contrasts are shuffled (for unpaired training)
-### Testing
-python cGAN.py --dataroot datasets/IXI --name cGAN_run --phase test --output_nc 1 --input_nc 1 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints
-## Prerequisites
-Linux  <br />
-Python 2.7  <br />
-CPU or NVIDIA GPU + CUDA CuDNN  <br />
-Pytorch [0.2.0](http://download.pytorch.org/whl/cu80/torch-0.2.0.post2-cp27-cp27mu-manylinux1_x86_64.whl) <br />
-Other dependencies - visdom, dominate  
+- [전처리 내용]
+  - train: 25명, val: 5명, test:10명
+  - 각 환자에 대해서 유효한 slice만 활용 (환자당 91개 slice만 활용) 
+  - ex. [3,910,256,256] -> [인접한 slice, 전체 slice(10명), x, y]
+  - 인접한 slice: slice가 한 칸씩만 밀려진 데이터가 그대로 들어가 있음 (pGAN의 contribution 중 인접한 slice를 활용하여 loss를 구함)
+  - 폴더 구성 방법: 'pGAN-cGAN/datasets/IXI' 이 경로에 train, val, test 폴더를 두고 각 폴더에 해당하는 mat 파일을 둔다. <br /><br /><br />
+
+# Model 
+
+>## ourGAN
+- pGAN을 Base로 함 (Supervised learning)<br>
+- 모듈을 추가해가며 비교 실험 진행 예정
+## Training
+python train.py --model ourGAN --dataroot datasets/IXI --name ourGAN_run --which_direction BtoA --lambda_A 100 --batchSize 16 --output_nc 1 --input_nc 3 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_vgg 100 --checkpoints_dir checkpoints/ --training --dataset_misalign
+## Test
+python test.py --model ourGAN --dataroot datasets/IXI --name ourGAN_run --which_direction BtoA --phase test --output_nc 1 --input_nc 3 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ --gpu_ids 0,2 <br /><br />
+
+>## pGAN
+## Training
+python train.py --model pGAN --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --lambda_A 100 --batchSize 16 --output_nc 1 --input_nc 3 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_vgg 100 --checkpoints_dir checkpoints/ --training --dataset_misalign
+## Test
+python test.py --model pGAN --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --phase test --output_nc 1 --input_nc 3 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ --gpu_ids 1,2,4 <br /><br />
+
+>## cGAN
+## Training
+python train.py --model cGAN --dataroot datasets/IXI --name cGAN_run --which_direction BtoA --batchSize 16 --output_nc 1 --input_nc 1 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_A 100 --lambda_B 100 --checkpoints_dir checkpoints/ --dataset_mode unaligned_mat --training --dataset_misalign
+## Test
+python test.py --model cGAN --dataroot datasets/IXI --name cGAN_run --phase test --output_nc 1 --input_nc 1 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ <br /><br />
+
+>## 코드 추가 설명
+1. Visdom 실행 (모든 코드 실행 전) <br>
+python -m visdom.server -p 8097
+
+2. Parser <br>
+--model: 사용할 모델 (pGAN,cGAN,ourGAN)<br>
+--dataroot: 데이터셋 경로<br>
+--name: 결과 저장될 폴더명<br>
+--dataset_misalign: 데이터셋에 misalign 적용 여부 (torchio.RandomAffine을 통해 의도적인 misalign을 가할 수 있어. /data/__init__.py 코드 참고)<br>
+그 외 options 폴더 안 parser에 대한 코드 참고<br><br>
 
 # Citation
 You are encouraged to modify/distribute this code. However, please acknowledge this code and cite the paper appropriately.
@@ -58,8 +71,10 @@ You are encouraged to modify/distribute this code. However, please acknowledge t
 ```
 For any questions, comments and contributions, please contact Salman Dar (salman[at]ee.bilkent.edu.tr) <br />
 
-(c) ICON Lab 2019
+(c) ICON Lab 2019<br><br>
 
 
-## Acknowledgments
+# Acknowledgments
 This code is based on implementations by [pytorch-DCGAN](https://github.com/pytorch/examples/tree/master/dcgan) and [CycleGAN and pix2pix in PyTorch](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix).
+
+This code was written by [icon-lab/pGAN-cGAN](https://github.com/icon-lab/pGAN-cGAN) and we only modified it.
