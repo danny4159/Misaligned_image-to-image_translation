@@ -30,21 +30,21 @@
 >## ourGAN
 - pGAN을 Base로 함 (Supervised learning)<br>
 - 모듈을 추가해가며 비교 실험 진행 예정
-## Training
+### Training
 python train.py --model ourGAN --dataroot datasets/IXI --name ourGAN_run --which_direction BtoA --lambda_A 100 --batchSize 16 --output_nc 1 --input_nc 3 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_vgg 100 --checkpoints_dir checkpoints/ --training --dataset_misalign
-## Test
+### Test
 python test.py --model ourGAN --dataroot datasets/IXI --name ourGAN_run --which_direction BtoA --phase test --output_nc 1 --input_nc 3 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ --gpu_ids 0,2 <br /><br />
 
 >## pGAN
-## Training
+### Training
 python train.py --model pGAN --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --lambda_A 100 --batchSize 16 --output_nc 1 --input_nc 3 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_vgg 100 --checkpoints_dir checkpoints/ --training --dataset_misalign
-## Test
+### Test
 python test.py --model pGAN --dataroot datasets/IXI --name pGAN_run --which_direction BtoA --phase test --output_nc 1 --input_nc 3 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ --gpu_ids 1,2,4 <br /><br />
 
 >## cGAN
-## Training
+### Training
 python train.py --model cGAN --dataroot datasets/IXI --name cGAN_run --which_direction BtoA --batchSize 16 --output_nc 1 --input_nc 1 --gpu_ids 0,1 --niter 50 --niter_decay 50 --save_epoch_freq 25 --lambda_A 100 --lambda_B 100 --checkpoints_dir checkpoints/ --dataset_mode unaligned_mat --training --dataset_misalign
-## Test
+### Test
 python test.py --model cGAN --dataroot datasets/IXI --name cGAN_run --phase test --output_nc 1 --input_nc 1 --how_many 1200 --results_dir results/ --checkpoints_dir checkpoints/ <br /><br />
 
 >## 코드 추가 설명
