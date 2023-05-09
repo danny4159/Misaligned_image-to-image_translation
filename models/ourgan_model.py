@@ -14,9 +14,9 @@ from pytorch_fid import fid_score
 from pytorch_fid.inception import InceptionV3
 from pytorch_fid.fid_score import calculate_activation_statistics
 
-class pGAN(BaseModel):
+class ourGAN(BaseModel):
     def name(self):
-        return 'pGAN'
+        return 'ourGAN'
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
@@ -149,7 +149,7 @@ class pGAN(BaseModel):
         
     def backward_G(self):
         # First, G(A) should fake the discriminator
-        fake_AB = torch.cat((self.real_A, self.fake_B), 1) # TODO: 왜 real_B와 fake_B를 넣어서 학습시키는게 아니라 real_A를 넣었을까?? 논리적으로 이해가 안돼 
+        fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.netD(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)*self.opt.lambda_adv
 

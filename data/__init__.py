@@ -3,6 +3,8 @@ from data.base_data_loader import BaseDataLoader
 import numpy as np, h5py
 import random
 import torchio as tio
+from sklearn.metrics import mutual_info_score
+
 
 def CreateDataLoader(opt):
     data_loader = CustomDatasetDataLoader()
@@ -26,19 +28,12 @@ def CreateDataset(opt):
     else:            
         data_y=np.array(f['data_y'])[:,:,:,slices-opt.input_nc//2:slices+opt.input_nc//2+1]
         data_x=np.array(f['data_x'])[:,:,:,slices-opt.output_nc//2:slices+opt.output_nc//2+1]
-    #Shuffle slices in data_y for the cGAN case (incase the input data is registered)
-    if opt.dataset_mode == 'unaligned_mat':  
-        if opt.isTrain:
-            print("Training phase")
-            random.shuffle(samples)
-        else:
-            print("Testing phase")
-        data_y=data_y[:,:,samples,:]
     #데이터에 misaling 적용할지 말지 (입력하면 True, 입력안하면 False) ex. --dataset_misalign
     if opt.dataset_misalign == True:
         print("▶ Dataset Misalign Appling...")
         print("opt.data_misalign: ", opt.dataset_misalign)
-        data_y = np.transpose(data_y,(3,0,1,2)) # 3,256,256,2275
+        data_y_origin = data_y.copy() # MI를 구하기 위한 용도
+        data_y = np.transpose(data_y,(3,0,1,2)) # 256,256,2275,3 -> 3,256,256,2275
         seed = 0 if opt.training else 10000  # 환자별로 transform 고정. train은 0부터 test는 10000부터
         for i in range(0, data_y.shape[3], 91): # 0에서 2274까지 91 간격으로 (환자마다 91개 slice데이터가 있고, 각각 transform을 다르게 적용하기위해)
             print("seed: ",seed)
@@ -50,7 +45,17 @@ def CreateDataset(opt):
             transform = tio.RandomAffine(scales=(0.95, 1.05, 0.95, 1.05, 1, 1), degrees=(0,0,5))
             data_y[:,:,:,i:i+91] = transform(data_y_patient)
         data_y = np.transpose(data_y,(1,2,3,0)) # 256,256,2275,3 (원위치)
+        average_mi = calculate_mi(data_y, data_y_origin)
+        print("Average Mutual Information: ", average_mi)
         print("---------------- Misalign complete ----------------")
+    #Shuffle slices in data_y for the cGAN case (incase the input data is registered)
+    if opt.dataset_mode == 'unaligned_mat':  
+        if opt.isTrain:
+            print("Training phase")
+            random.shuffle(samples)
+        else:
+            print("Testing phase")
+        data_y=data_y[:,:,samples,:]
     data_x=np.transpose(data_x,(3,2,0,1)) # 3,2275,256,256
     data_y=np.transpose(data_y,(3,2,0,1))
     #Ensure that there is no value less than 0
@@ -77,9 +82,27 @@ def CreateDataset(opt):
                 data_y[:,train_sample,:,:]=(data_y[:,train_sample,:,:]-0.5)/0.5
                 dataset.append({'A': torch.from_numpy(data_x[:,train_sample,:,:]), 'B':torch.from_numpy(data_y[:,train_sample,:,:]), 
                 'A_paths':opt.dataroot, 'B_paths':opt.dataroot})               
+    if opt.dataset_misalign == True:
+        return dataset, average_mi
+    return dataset, None
 
-    return dataset 
+## MI(Mutual Information) computation code
+def compute_mutual_information(x, y):
+    histogram_x = np.histogram(x.ravel(), bins=256)[0]
+    histogram_y = np.histogram(y.ravel(), bins=256)[0]
+    return mutual_info_score(histogram_x, histogram_y)
 
+def calculate_mi(data_y, data_y_transformed): # data_y.shape: [256,256,2275,3]
+    num_slices = data_y.shape[2]
+    mi_values = []
+    for i in range(num_slices):
+        original_slice = data_y[:,:,i,0]
+        transformed_slice = data_y_transformed[:,:,i,0]
+        mi = compute_mutual_information(original_slice, transformed_slice)
+        mi_values.append(mi)
+
+    average_mi = np.mean(mi_values)
+    return average_mi
 
 
 class CustomDatasetDataLoader(BaseDataLoader):
@@ -88,7 +111,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
 
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
-        self.dataset = CreateDataset(opt)
+        self.dataset, self.average_mi = CreateDataset(opt)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batchSize,

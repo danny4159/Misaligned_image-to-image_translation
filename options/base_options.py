@@ -19,10 +19,10 @@ class BaseOptions():
         self.parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         self.parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
-        self.parser.add_argument('--dataset_mode', type=str, default='aligned_mat', help='chooses how datasets are loaded. [unaligned_mat | aligned_mat]')
+        self.parser.add_argument('--dataset_mode', type=str, default='aligned_mat', help='if unaligned_mat, shuffle the dataset for cGAN. [unaligned_mat | aligned_mat]')
         self.parser.add_argument('--dataset_misalign', action='store_true', help='apply misalign or not.') # 입력되면 True, 입력안되면 False
-        self.parser.add_argument('--model', type=str, default='cycle_gan',
-                                 help='chooses which model to use. cycle_gan, pix2pix, test')
+        self.parser.add_argument('--model', type=str, default='ourGAN',
+                                 help='chooses which model to use. pGAN, cGAN, ourGAN')
         self.parser.add_argument('--which_direction', type=str, default='AtoB', help='AtoB or BtoA')
         self.parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
         self.parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')

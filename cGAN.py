@@ -5,6 +5,7 @@ def train(opt):
     from models import create_model
     from util.visualizer import Visualizer
     import sys
+    import os
     sys.argv.extend(['--no_dropout'])
 
     model = create_model(opt)
@@ -58,6 +59,12 @@ def train(opt):
         print('End of epoch %d / %d \t Time Taken: %d sec' %
               (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()
+    if opt.dataset_misalign == True: # misalign을 적용했을 때만 MI(Mutual information)를 출력 (MI: misalign의 정도를 정량화)
+        print("Average Mutual Information: ", data_loader.average_mi)
+        mi_path = os.path.join(opt.checkpoints_dir, opt.name, 'Avg MI.txt')
+        with open(mi_path, 'w') as f:
+            f.write(f"Average Mutual Information: {data_loader.average_mi}\n")
+
 def test(opt):
     import sys
     import os
@@ -66,6 +73,8 @@ def test(opt):
     from models import create_model
     from util.visualizer import Visualizer
     from util import html
+    import numpy as np
+
     sys.argv.extend(['--no_dropout'])
     sys.argv.extend(['--serial_batches'])
 
@@ -82,14 +91,30 @@ def test(opt):
     web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))
     webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
     # test
+    psnr_list = [] # A->B translation만 psnr을 구함
+    ssim_list = [] # A->B translation만 ssim을 구함
+    # fid_list = []
+    fid_score_list = []
     for i, data in enumerate(dataset):
         if i >= opt.how_many:
             break
         model.set_input(data)
-        model.test()
+        psnr, ssim = model.test() #TODO: FID_score는 추후 추가 (현재는 구현 실패함)
+        psnr_list.append(psnr)
+        ssim_list.append(ssim)
+        # fid_list.append(fid_score)
         visuals = model.get_current_visuals()
         img_path = model.get_image_paths()
         img_path[0]=img_path[0]+str(i)
-        print('%04d: process image... %s' % (i, img_path))
+        if i % 50 == 0: # 50의 배수만 진행상황 출력
+            print('%04d: process image... %s' % (i, img_path))
         visualizer.save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio)    
     webpage.save()    
+    print("Average PSRN: ", np.mean(psnr_list))
+    print("Average SSIM: ", np.mean(ssim_list))
+    eval_path = os.path.join(opt.results_dir, opt.name, 'PSNR,SSIM,FID eval.txt')
+    with open(eval_path, 'w') as f:
+        f.write(f"Average PSNR: {np.mean(psnr_list)}\n")
+        f.write(f"Average SSIM: {np.mean(ssim_list)}\n")
+    # print(fid_score_list)
+    # print(np.mean(fid_score_list))

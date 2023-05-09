@@ -6,6 +6,11 @@ import util.util as util
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+from torchvision.models import inception_v3
+from scipy.linalg import sqrtm
+import numpy as np
+from pytorch_msssim import ssim
+from torch import nn
 
 
 class cGAN(BaseModel):
@@ -78,15 +83,26 @@ class cGAN(BaseModel):
         self.real_B = Variable(self.input_B)
 
     def test(self):
-        self.real_A = Variable(self.input_A, volatile=True)
-        fake_B = self.netG_A(self.real_A)
-        self.rec_A = self.netG_B(fake_B).data
-        self.fake_B = fake_B.data
+        with torch.no_grad():
+            self.real_A = Variable(self.input_A)
+            fake_B = self.netG_A(self.real_A)
+            self.rec_A = self.netG_B(fake_B).data
+            self.fake_B = fake_B.data
 
-        self.real_B = Variable(self.input_B, volatile=True)
-        fake_A = self.netG_B(self.real_B)
-        self.rec_B = self.netG_A(fake_A).data
-        self.fake_A = fake_A.data
+            self.real_B = Variable(self.input_B)
+            fake_A = self.netG_B(self.real_B)
+            self.rec_B = self.netG_A(fake_A).data
+            self.fake_A = fake_A.data
+
+        # PSNR 계산
+        mse = nn.MSELoss()(self.fake_B, self.real_B)
+        psnr = 10 * torch.log10(1 / mse)
+
+        # SSIM 계산
+        ssim_value = ssim(self.fake_B, self.real_B, data_range=2.0, size_average=True) # data_range: -1~1
+
+        return psnr.item(), ssim_value.item()
+
 
     # get image paths
     def get_image_paths(self):
@@ -186,3 +202,30 @@ class cGAN(BaseModel):
         self.save_network(self.netD_A, 'D_A', label, self.gpu_ids)
         self.save_network(self.netG_B, 'G_B', label, self.gpu_ids)
         self.save_network(self.netD_B, 'D_B', label, self.gpu_ids)
+
+    def calculate_fid_score(self, fake_images, real_images):
+        # Load Inception-v3 model
+        inception_model = inception_v3(pretrained=True, transform_input=False).cuda()
+        inception_model = inception_model.eval()
+
+        # Convert grayscale images to RGB format by duplicating the channel 3 times
+        fake_images_rgb = fake_images.repeat(1, 3, 1, 1)
+        real_images_rgb = real_images.repeat(1, 3, 1, 1)
+
+        # Extract features for fake images
+        fake_features = inception_model(fake_images_rgb).detach().cpu().numpy()
+        fake_mean, fake_cov = fake_features.mean(axis=0), np.cov(fake_features, rowvar=False, ddof=0)
+
+        # Extract features for real images
+        real_features = inception_model(real_images_rgb).detach().cpu().numpy()
+        real_mean, real_cov = real_features.mean(axis=0), np.cov(real_features, rowvar=False, ddof=0)
+
+        # Calculate FID score
+        mean_diff = fake_mean - real_mean
+        cov_mean = sqrtm(fake_cov.dot(real_cov))
+        if np.iscomplexobj(cov_mean):
+            cov_mean = cov_mean.real
+
+        fid_score = mean_diff.dot(mean_diff) + np.trace(fake_cov) + np.trace(real_cov) - 2 * np.trace(cov_mean)
+
+        return fid_score

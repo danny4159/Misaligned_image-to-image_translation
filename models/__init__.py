@@ -10,6 +10,10 @@ def create_model(opt):
         opt.dataset_mode = 'aligned_mat'
         from .pgan_model import pGAN
         model = pGAN()        
+    elif opt.model =='ourGAN':
+        opt.dataset_mode = 'aligned_mat'
+        from .ourgan_model import ourGAN
+        model = ourGAN() 
     else:
         raise NotImplementedError('model [%s] not implemented.' % opt.model)
     #Initizlize the model based on the arguments 

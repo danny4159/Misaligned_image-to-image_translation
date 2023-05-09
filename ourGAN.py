@@ -1,6 +1,5 @@
 def train(opt):
     import time
-    from options.train_options import TrainOptions
     from data import CreateDataLoader
     from models import create_model
     from util.visualizer import Visualizer
@@ -67,7 +66,6 @@ def train(opt):
 def test(opt):
     import sys
     import os
-    from options.test_options import TestOptions
     from data import CreateDataLoader
     from models import create_model
     from util.visualizer import Visualizer
