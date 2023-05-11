@@ -13,9 +13,9 @@
 *.mat
 
 # 기타
-*.txt
 *.html
-
+*log.txt
+*opt.txt
 
 
 ### 예외
