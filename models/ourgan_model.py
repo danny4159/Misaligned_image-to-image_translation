@@ -4,15 +4,9 @@ import util.util as util
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
-import numpy as np
 from pytorch_msssim import ssim
 from torch import nn
-
-import torch.nn.functional as F
-from torchvision import models, transforms
-from pytorch_fid import fid_score
-from pytorch_fid.inception import InceptionV3
-from pytorch_fid.fid_score import calculate_activation_statistics
+from torchvision import models
 
 class ourGAN(BaseModel):
     def name(self):
@@ -36,7 +30,7 @@ class ourGAN(BaseModel):
                 self.load_network(self.netD, 'D', opt.which_epoch)
 
         if self.isTrain:
-            self.fake_AB_pool = ImagePool(opt.pool_size)
+            self.fake_AB_pool = ImagePool(opt.pool_size) # create image buffer to store previously generated images
             # define loss functions
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
             self.criterionL1 = torch.nn.L1Loss()
@@ -89,7 +83,10 @@ class ourGAN(BaseModel):
 
         # SSIM 계산
         ssim_value = ssim(self.fake_B, self.real_B, data_range=2.0, size_average=True) # data_range: -1~1
-
+        
+        # TODO: LPIPS 계산 추가 (https://github.com/cszhilu1998/RAW-to-sRGB)
+        # https://github.com/cszhilu1998/RAW-to-sRGB/blob/master/metrics.py => RGB에 맞게 LPIPS 수정 필요
+        
         return psnr.item(), ssim_value.item()
 
         ##############FID Score를 위한 코드. 실패###############
@@ -216,3 +213,14 @@ class VGG16(torch.nn.Module):
         h_relu1 = self.stage1(X)
         h_relu2 = self.stage2(h_relu1)       
         return h_relu2
+    
+    
+""" model.py를 이해하기 위한 코드 필요
+ex)
+
+if __name__ == '__main__':
+    opt = TrainOptions().parse()   # get training options
+    model = ourGAN(opt)
+    
+    
+"""
