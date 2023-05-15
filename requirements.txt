@@ -1,0 +1,18 @@
+# Install PyTorch by using ltt
+# pip install light-the-torch
+# ltt install torch torchvision torchaudio
+
+monai==1.1.0
+pytorch-lightning==1.5.10
+torchio==0.18.73
+pandas==1.1.5
+seaborn==0.11.1
+scikit-learn
+dominate
+pytorch-msssim
+h5py
+numpy
+pillow
+scikit-image
+torchvision
+visdom
