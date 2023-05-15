@@ -6,13 +6,15 @@ def train(opt):
     import os
 
     model = create_model(opt)
+
     #Loading data
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
-    print('Training images = %d' % dataset_size)    
+    print('Training images = %d' % dataset_size)
     visualizer = Visualizer(opt) # Web Visualizer
     total_steps = 0
+
     #Starts training
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
