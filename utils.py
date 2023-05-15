@@ -174,3 +174,5 @@ def plot_blended_images(t1, t2, ncols=None):
     plt.show()
     
     return fig
+ 
+ # TODO: 여기에 필요한 함수를 추가 (docstring)

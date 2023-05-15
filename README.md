@@ -19,3 +19,12 @@ ltt install torch torchvision torchaudio
 ```
 pip install -r requirements.txt # 다니엘 기존 코드를 테스트 해봄, 잘 돌아감 
 ```
+
+### Generative Model 설치
+```
+git clone https://github.com/Project-MONAI/GenerativeModels.git
+cd GenerativeModels/
+python setup.py install
+pip install lpips
+pip install gdown
+```
