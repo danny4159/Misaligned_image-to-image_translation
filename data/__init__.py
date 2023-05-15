@@ -44,10 +44,13 @@ def CreateDataset(opt):
             # transform = tio.RandomAffine(scales=(0.99, 1.01, 0.99, 1.01, 1, 1), degrees=(0,0,1))
             transform = tio.RandomAffine(scales=(0.95, 1.05, 0.95, 1.05, 1, 1), degrees=(0,0,5))
             data_y[:,:,:,i:i+91] = transform(data_y_patient)
+        
         data_y = np.transpose(data_y,(1,2,3,0)) # 256,256,2275,3 (원위치)
         average_mi = calculate_mi(data_y, data_y_origin)
+
         print("Average Mutual Information: ", average_mi)
         print("---------------- Misalign complete ----------------")
+
     #Shuffle slices in data_y for the cGAN case (incase the input data is registered)
     if opt.dataset_mode == 'unaligned_mat':  
         if opt.isTrain:
