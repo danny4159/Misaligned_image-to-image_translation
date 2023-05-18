@@ -274,5 +274,26 @@ def get_current_visuals_for_cgan(real_A,fake_A,real_B,fake_B):
     fake_B = tensor2im_minmax(fake_B.data)
     return OrderedDict([('real_A', real_A), ('fake_A', fake_A), ('real_B', real_B), ('fake_B', fake_B)])
 
+def plot_2d_slice(images, image_names, slice_idx):
+    """
+    Visualizes the 2D slices from the given 3D images at the specified slice index.
+
+    Args:
+        images (list[torch.Tensor]): List of 3D image tensors (batch_size, channel, width, height, depth) to be displayed.
+        image_names (list[str]): List of names for the images for displaying as titles.
+        slice_idx (int): The slice index along the depth axis to visualize the 2D slice from the 3D images.
+
+    Returns:
+        None
+    """
+    fig, axes = plt.subplots(1, len(images), figsize=(12, 4))
+
+    for idx, (image, title) in enumerate(zip(images, image_names)):
+        slice_image = image[0, 0, :, :, slice_idx].cpu().numpy()
+        axes[idx].imshow(slice_image, cmap='gray')
+        axes[idx].axis('off')
+        axes[idx].set_title(title)
+
+    plt.show()
 
  # TODO: 여기에 필요한 함수를 추가 (docstring)
