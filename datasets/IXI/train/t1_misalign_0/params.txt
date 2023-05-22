@@ -1,0 +1,8 @@
+mode: nearest
+prob: 1.0
+sigma_range: (0.3, 0.5)
+magnitude_range: (0.04, 0.04, 0.04)
+rotate_range: (0.04, 0.04, 0.04)
+shear_range: (0.01, 0.01, 0.01)
+translate_range: (1, 1, 1)
+padding_mode: border

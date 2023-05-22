@@ -37,65 +37,55 @@ Examples:
 >>> blended_img = blend_and_transpose(img1, img2)
 """
 
-# def plot_images(images, labels, siz=4, cmap=None):
-#     """
-#     This function plots a list of images with corresponding labels.
+def tensor2im(image_tensor, imtype=np.float32): # Changed tensor2im
+    image_numpy = image_tensor[0].cpu().float().numpy()
+    if image_numpy.shape[0] == 1:
+        image_numpy = np.tile(image_numpy, (3, 1, 1))
+    image_numpy = np.transpose(image_numpy, (1, 2, 0))       
+    #image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0 # scale: -1~1 -> 0~255
+    return image_numpy.astype(imtype)
+
+def plot_images(images, labels, siz=4, vmin=0, vmax=2, cmap=None):
+    """
+    This function plots a list of images with corresponding labels.
     
-#     Parameters:
-#     -----------
-#     images : list of ndarray
-#         List of images. Each image should be a 2D or 3D ndarray.
-#     labels : list of str
-#         List of labels. Each label corresponds to an image.
-#     siz : int, optional
-#         Size of each image when plotted. Default is 4.
-#     cmap : str, optional
-#         Colormap to use for displaying images. If 'gray', the image will be displayed in grayscale. 
-#         Default is None, in which case the default colormap is used.
+    Parameters:
+    -----------
+    images : list of ndarray
+        List of images. Each image should be a 2D or 3D ndarray.
+    labels : list of str
+        List of labels. Each label corresponds to an image.
+    siz : int, optional
+        Size of each image when plotted. Default is 4.
+    cmap : str, optional
+        Colormap to use for displaying images. If 'gray', the image will be displayed in grayscale. 
+        Default is None, in which case the default colormap is used.
         
-#     Raises:
-#     -------
-#     AssertionError
-#         If the number of images does not match the number of labels.
+    Raises:
+    -------
+    AssertionError
+        If the number of images does not match the number of labels.
     
-#     Examples:
-#     ---------
-#     >>> img1 = np.random.rand(10, 10)
-#     >>> img2 = np.random.rand(10, 10)
-#     >>> plot_images([img1, img2], ['Image 1', 'Image 2'])
+    Examples:
+    ---------
+    >>> img1 = np.random.rand(10, 10)
+    >>> img2 = np.random.rand(10, 10)
+    >>> plot_images([img1, img2], ['Image 1', 'Image 2'])
     
-#     >>> img1 = np.random.rand(10, 10)
-#     >>> img2 = np.random.rand(10, 10)
-#     >>> plot_images([img1, img2], ['Image 1', 'Image 2'], cmap='gray')
-#     """
-#     assert len(images) == len(labels), "Mismatch in number of images and labels"
-#     n = len(images)
-    
-#     plt.figure(figsize=(siz*n, siz))  # Adjust figure size based on number of images
-#     for i in range(n):
-#         plt.subplot(1, n, i+1)
-#         plt.imshow(images[i])
-#         if cmap == 'gray':
-#             plt.gray()
-#         plt.title(labels[i])
-#     plt.show()
-
-def plot_images(images, image_names):
+    >>> img1 = np.random.rand(10, 10)
+    >>> img2 = np.random.rand(10, 10)
+    >>> plot_images([img1, img2], ['Image 1', 'Image 2'], cmap='gray')
     """
-    Plot images using matplotlib.
-
-    Args:
-        images (list): A list of images. Each image should be a 2D numpy array.
-        image_names (list): A list of names for the images. The names are used as titles for the subplots.
-
-    """
-    assert len(images) == len(image_names)
-    plt.figure(figsize=(5, 5))
-    for i in range(len(images)):
-        plt.subplot(1, len(images), i + 1)
-        plt.title(image_names[i])
-        plt.imshow(images[i].squeeze(), cmap='gray', vmin=0, vmax=1)
-        plt.axis('off')
+    assert len(images) == len(labels), "Mismatch in number of images and labels"
+    n = len(images)
+    
+    plt.figure(figsize=(siz*n, siz))  # Adjust figure size based on number of images
+    for i in range(n):
+        plt.subplot(1, n, i+1)
+        plt.imshow(images[i], vmin=vmin, vmax=vmax)
+        if cmap == 'gray':
+            plt.gray()
+        plt.title(labels[i])
     plt.show()
 
 
@@ -216,62 +206,6 @@ def save_images(images, image_names, save_dir, epoch):
         # Save the image as a PNG file
         plt.imsave(f"{save_dir}/epoch_{epoch}_{name}.png", image)
 
-def tensor2im_minmax(image_tensor, imtype=np.uint8):
-    """
-    Convert a PyTorch tensor to an image (numpy array) with pixel values in the range 0~255.
-
-    Args:
-        image_tensor (torch.Tensor): A PyTorch tensor representing an image, with shape [C, H, W]
-            where C is the number of channels, H is the height, and W is the width. The first dimension 
-            should be the channels dimension, and it should have at least 1 channel. If it only has 1 
-            channel, that channel is duplicated to form a 3-channel image.
-        imtype (type, optional): The desired type for the pixels of the output image. Default is np.uint8,
-            but it can be any type that is compatible with numpy arrays.
-
-    Returns:
-        np.ndarray: A 2D numpy array representing the image, with shape [H, W, C] and type `imtype`.
-            The pixel values are scaled to be in the range 0~255.
-
-    Note:
-        The function first finds the minimum and maximum values in the input tensor, then scales the pixel 
-        values to be in the range 0~1, and finally scales them to be in the range 0~255. As a result, 
-        the output image has the full range of possible brightness levels, regardless of the range of the 
-        pixel values in the input tensor.
-    """
-    image_numpy = image_tensor[0].cpu().float().numpy()
-    if image_numpy.shape[0] == 1:
-        image_numpy = np.tile(image_numpy, (3, 1, 1))
-        
-    # Find min and max values
-    min_val = np.min(image_numpy)
-    max_val = np.max(image_numpy)
-
-    # Scale to 0~1 range
-    image_numpy = (image_numpy - min_val) / (max_val - min_val)
-
-    # Scale to 0~255
-    image_numpy = np.transpose(image_numpy, (1, 2, 0)) * 255.0 
-    return image_numpy.astype(imtype)
-
-# def get_current_visuals_for_pgan(real_A,fake_B,real_B):
-#     """
-#     This function prepares the visuals for a PGAN model.
-
-#     It converts the real and fake images from tensors to images and returns them in an OrderedDict. 
-
-#     Args:
-#     real_A (torch.Tensor): Real image from the domain A.
-#     fake_B (torch.Tensor): Generated fake image transformed from the domain A to B.
-#     real_B (torch.Tensor): Real image from the domain B.
-
-#     Returns:
-#     OrderedDict: A dictionary containing the images. The keys are 'real_A', 'fake_B' and 'real_B' and the values are the corresponding images.
-#     """
-#     real_A = tensor2im_minmax(real_A.data)
-#     fake_B = tensor2im_minmax(fake_B.data)
-#     real_B = tensor2im_minmax(real_B.data)
-#     return OrderedDict([('real_A', real_A), ('fake_B', fake_B), ('real_B', real_B)])
-
 def get_current_visuals_for_pgan(real_A,fake_B,real_B):
     """
     This function prepares the visuals for a PGAN model.
@@ -286,8 +220,9 @@ def get_current_visuals_for_pgan(real_A,fake_B,real_B):
     Returns:
     OrderedDict: A dictionary containing the images. The keys are 'real_A', 'fake_B' and 'real_B' and the values are the corresponding images.
     """
-    real_A, fake_B, real_B = real_A.data.cpu().numpy()[0], fake_B.data.cpu().numpy()[0], real_B.data.cpu().numpy()[0]
-
+    real_A = tensor2im(real_A.data)
+    fake_B = tensor2im(fake_B.data)
+    real_B = tensor2im(real_B.data)
     return OrderedDict([('real_A', real_A), ('fake_B', fake_B), ('real_B', real_B)])
 
 
@@ -307,13 +242,10 @@ def get_current_visuals_for_cgan(real_A,fake_A,real_B,fake_B):
     Returns:
     OrderedDict: A dictionary containing the images. The keys are 'real_A', 'fake_A', 'real_B' and 'fake_B' and the values are the corresponding images.
     """
-    # real_A = tensor2im_minmax(real_A.data)
-    # fake_A = tensor2im_minmax(fake_A.data)
-    # real_B = tensor2im_minmax(real_B.data)
-    # fake_B = tensor2im_minmax(fake_B.data)
-    real_A, fake_A, fake_B, real_B = real_A.data.cpu().numpy()[0], fake_A.data.cpu().numpy()[0], fake_B.data.cpu().numpy()[0], real_B.data.cpu().numpy()[0]
-
-
+    real_A = tensor2im(real_A.data)
+    fake_A = tensor2im(fake_A.data)
+    real_B = tensor2im(real_B.data)
+    fake_B = tensor2im(fake_B.data)
     return OrderedDict([('real_A', real_A), ('fake_A', fake_A), ('real_B', real_B), ('fake_B', fake_B)])
 
 def plot_2d_slice(images, image_names, slice_idx):
